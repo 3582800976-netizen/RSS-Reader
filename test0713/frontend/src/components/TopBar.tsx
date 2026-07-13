@@ -37,7 +37,7 @@ export default function TopBar({
         <div className="brand-mark" aria-hidden />
         <div className="brand-text">
           <strong>Mercury Web</strong>
-          <span>本地 RSS · AI</span>
+          <span>本地 RSS</span>
         </div>
       </div>
 
