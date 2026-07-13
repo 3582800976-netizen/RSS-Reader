@@ -11,8 +11,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.db import init_db
-from app.routers import entries, feeds, opml, stats, sync
+from app.routers import agents, entries, feeds, opml, providers, stats, sync, usages
 from app.services.bootstrap import bootstrap_starter_feeds
+from app.services.prompts import ensure_default_prompts_file
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,12 +25,13 @@ DIST = ROOT / "frontend" / "dist"
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    ensure_default_prompts_file()
     # Import Mercury starter feeds (screenshot 11 sources) if missing, then sync.
     asyncio.create_task(bootstrap_starter_feeds())
     yield
 
 
-app = FastAPI(title="RSS Reader — 必做①", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="RSS Reader — 必做① + AI", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,6 +46,9 @@ app.include_router(entries.router)
 app.include_router(opml.router)
 app.include_router(sync.router)
 app.include_router(stats.router)
+app.include_router(providers.router)
+app.include_router(agents.router)
+app.include_router(usages.router)
 
 
 @app.get("/api/health")

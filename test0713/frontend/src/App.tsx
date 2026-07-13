@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, Entry, Feed, Stats } from "./api";
+import AgentSettingsModal from "./components/AgentSettingsModal";
 import EntryList from "./components/EntryList";
 import ReaderPane from "./components/ReaderPane";
 import Sidebar from "./components/Sidebar";
@@ -33,6 +34,7 @@ export default function App() {
   const [theme, setTheme] = useState<ThemeMode>(() => loadTheme());
   const [fontSize, setFontSize] = useState<FontSize>(() => loadFontSize());
   const [readingMode, setReadingMode] = useState<ReadingMode>(() => loadReadingMode());
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -125,7 +127,10 @@ export default function App() {
         }
         onImportOpml={() => fileRef.current?.click()}
         onExportOpml={() => withBusy(() => api.exportOpml(), "已导出 OPML")}
+        onOpenAiSettings={() => setAiSettingsOpen(true)}
       />
+
+      <AgentSettingsModal open={aiSettingsOpen} onClose={() => setAiSettingsOpen(false)} />
 
       <input
         ref={fileRef}
@@ -229,6 +234,7 @@ export default function App() {
           entry={selectedEntry}
           mode={readingMode}
           busy={busy}
+          onStatus={setStatus}
           onToggleStar={() => {
             if (!selectedEntry) return;
             withBusy(async () => {

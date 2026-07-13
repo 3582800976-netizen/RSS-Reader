@@ -6,6 +6,30 @@ export type ListView = "all" | "unread" | "starred";
 const THEME_KEY = "rss-theme";
 const FONT_KEY = "rss-font";
 const MODE_KEY = "rss-reading-mode";
+const TRANSLATE_LANG_KEY = "rss-translate-lang";
+
+export const TRANSLATE_LANGUAGES: { value: string; label: string }[] = [
+  { value: "Chinese", label: "中文" },
+  { value: "English", label: "English" },
+  { value: "Japanese", label: "日本語" },
+  { value: "Korean", label: "한국어" },
+  { value: "French", label: "Français" },
+  { value: "German", label: "Deutsch" },
+  { value: "Spanish", label: "Español" },
+  { value: "Portuguese", label: "Português" },
+  { value: "Russian", label: "Русский" },
+  { value: "Arabic", label: "العربية" },
+];
+
+export function loadTranslateLanguage(): string {
+  const v = localStorage.getItem(TRANSLATE_LANG_KEY);
+  if (v && TRANSLATE_LANGUAGES.some((x) => x.value === v)) return v;
+  return "Chinese";
+}
+
+export function saveTranslateLanguage(lang: string) {
+  localStorage.setItem(TRANSLATE_LANG_KEY, lang);
+}
 
 export function loadTheme(): ThemeMode {
   const v = localStorage.getItem(THEME_KEY);

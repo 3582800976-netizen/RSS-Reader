@@ -13,6 +13,7 @@ type Props = {
   onSyncAll: () => void;
   onImportOpml: () => void;
   onExportOpml: () => void;
+  onOpenAiSettings: () => void;
 };
 
 export default function TopBar({
@@ -28,6 +29,7 @@ export default function TopBar({
   onSyncAll,
   onImportOpml,
   onExportOpml,
+  onOpenAiSettings,
 }: Props) {
   return (
     <header className="topbar">
@@ -35,7 +37,7 @@ export default function TopBar({
         <div className="brand-mark" aria-hidden />
         <div className="brand-text">
           <strong>Mercury Web</strong>
-          <span>本地 RSS · 必做①</span>
+          <span>本地 RSS · AI</span>
         </div>
       </div>
 
@@ -78,6 +80,9 @@ export default function TopBar({
         </button>
         <button type="button" className="ghost" onClick={onThemeToggle} title="主题">
           {theme === "dark" ? "浅色" : "深色"}
+        </button>
+        <button type="button" className="ghost" disabled={busy} onClick={onOpenAiSettings}>
+          AI 设置
         </button>
         <button type="button" className="ghost" disabled={busy} onClick={onImportOpml}>
           导入

@@ -52,7 +52,15 @@ cd test/test0713
 - 深色 / 浅色主题、字号 S/M/L（`localStorage` 持久化）  
 - 阅读模式：阅读 / 网页（iframe）/ 双栏  
 
-**未包含**：内容清洗②、AI 摘要/翻译、笔记文摘、标签 Agent、Electron 打包。
+### AI（本期已接入）
+
+- Provider 自配（OpenAI 兼容：DeepSeek / OpenAI / Ollama 等）
+- 流式摘要（SSE）+ 缓存
+- 段落级双语翻译 + 单段重试
+- Token 用量统计（本地 `llm_usages`）
+- 顶栏「AI 设置」；阅读区「摘要 / 翻译对照」
+
+**未包含**：内容清洗②、笔记文摘、标签 Agent、Electron 打包。
 
 ---
 
@@ -114,6 +122,12 @@ test0713/
 | POST/GET | `/api/opml/import` · `/export` | OPML |
 | GET | `/api/health` | 健康检查 |
 | GET | `/docs` | Swagger |
+| GET/POST/PATCH/DELETE | `/api/ai/providers` | LLM Provider 管理 |
+| POST | `/api/ai/providers/test` | 连通性测试 |
+| GET/PUT | `/api/ai/settings` · `/api/ai/settings/{agent}` | 智能体设置 |
+| GET/POST | `/api/ai/summary/{id}` · `/api/ai/summary/stream` | 摘要缓存 / 流式摘要 |
+| GET/POST/DELETE | `/api/ai/translate...` | 翻译 / 重试 / 清除 |
+| GET | `/api/ai/usages` · `/summary` | Token 用量 |
 
 ---
 
