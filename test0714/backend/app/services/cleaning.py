@@ -1,0 +1,241 @@
+from __future__ import annotations
+
+import hashlib
+import logging
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+import bleach
+import html2text
+import sqlite3
+from readability import Document
+
+logger = logging.getLogger(__name__)
+
+ALLOWED_TAGS: set[str] = {
+    "p", "h1", "h2", "h3", "h4", "h5", "h6",
+    "ul", "ol", "li", "blockquote", "pre", "code",
+    "a", "img", "strong", "em", "b", "i", "u", "del", "s",
+    "br", "hr", "table", "thead", "tbody", "tr", "th", "td",
+    "figure", "figcaption", "caption", "sup", "sub",
+}
+ALLOWED_ATTRS: dict[str, list[str]] = {
+    "a": ["href", "title"],
+    "img": ["src", "alt", "title"],
+    "th": ["align"],
+    "td": ["align"],
+}
+
+
+@dataclass
+class CleanedResult:
+    cleaned_html: str
+    cleaned_markdown: str
+    word_count: int
+    status: str  # 'success' | 'partial' | 'failed'
+    title: str | None = None
+    byline: str | None = None
+
+
+def _compute_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+# ---------------------------------------------------------------------------
+# Stage 1: Extract main content via Readability
+# ---------------------------------------------------------------------------
+
+def extract(html: str, url: str = "") -> tuple[str, str | None, str | None]:
+    """Return (cleaned_html, title, byline). Raises on failure."""
+    doc = Document(html)
+    title = doc.title() or None
+    cleaned = doc.summary(html_partial=True)
+    if not cleaned or len(cleaned.strip()) < 50:
+        raise ValueError("Readability returned empty or too-short content")
+    return cleaned, title, None
+
+
+# ---------------------------------------------------------------------------
+# Stage 2: Sanitize HTML and resolve relative links
+# ---------------------------------------------------------------------------
+
+def sanitize(html: str, base_url: str = "") -> str:
+    sanitized = bleach.clean(
+        html,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRS,
+        strip=True,
+    )
+    if base_url:
+        # Resolve relative links
+        from urllib.parse import urljoin
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(sanitized, "lxml")
+        for tag in soup.find_all("a", href=True):
+            tag["href"] = urljoin(base_url, tag["href"])
+        for tag in soup.find_all("img", src=True):
+            tag["src"] = urljoin(base_url, tag["src"])
+        sanitized = str(soup.body) if soup.body else str(soup)
+    return sanitized
+
+
+# ---------------------------------------------------------------------------
+# Stage 3: Convert cleaned HTML to Markdown
+# ---------------------------------------------------------------------------
+
+def convert_to_markdown(html: str) -> str:
+    converter = html2text.HTML2Text()
+    converter.body_width = 0
+    converter.ignore_links = False
+    converter.ignore_images = False
+    converter.ignore_tables = False
+    converter.protect_links = True
+    converter.mark_code = True
+    md = converter.handle(html)
+    return md.strip()
+
+
+# ---------------------------------------------------------------------------
+# Stage 4: Cache result to database
+# ---------------------------------------------------------------------------
+
+def cache(conn: sqlite3.Connection, entry_id: int, result: CleanedResult) -> None:
+    conn.execute(
+        """
+        INSERT INTO entry_cleaned
+            (entry_id, cleaned_html, cleaned_markdown, word_count, status, source_hash, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(entry_id) DO UPDATE SET
+            cleaned_html = excluded.cleaned_html,
+            cleaned_markdown = excluded.cleaned_markdown,
+            word_count = excluded.word_count,
+            status = excluded.status,
+            source_hash = excluded.source_hash,
+            updated_at = excluded.updated_at
+        """,
+        (
+            entry_id,
+            result.cleaned_html,
+            result.cleaned_markdown,
+            result.word_count,
+            result.status,
+            None,  # source_hash set by caller
+            _utc_now(),
+        ),
+    )
+    conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Main entry point: clean one entry end-to-end
+# ---------------------------------------------------------------------------
+
+def clean_entry(conn: sqlite3.Connection, entry_id: int) -> CleanedResult:
+    """Clean a single entry. Fetches entry.summary, runs pipeline, caches result."""
+    row = conn.execute(
+        "SELECT id, summary, url FROM entries WHERE id = ?", (entry_id,)
+    ).fetchone()
+    if not row:
+        raise ValueError(f"Entry {entry_id} not found")
+
+    raw_html = row["summary"] or ""
+    entry_url = row["url"] or ""
+    source_hash = _compute_hash(raw_html) if raw_html else ""
+
+    # Check cache
+    cached = conn.execute(
+        "SELECT * FROM entry_cleaned WHERE entry_id = ?", (entry_id,)
+    ).fetchone()
+    if cached and cached["source_hash"] == source_hash and cached["status"] != "failed":
+        return CleanedResult(
+            cleaned_html=cached["cleaned_html"] or "",
+            cleaned_markdown=cached["cleaned_markdown"] or "",
+            word_count=cached["word_count"] or 0,
+            status=cached["status"],
+        )
+
+    if not raw_html:
+        return CleanedResult(
+            cleaned_html="",
+            cleaned_markdown="",
+            word_count=0,
+            status="failed",
+        )
+
+    # Stage 1: Extract
+    cleaned_html: str = raw_html
+    title: str | None = None
+    byline: str | None = None
+    status: str = "success"
+    markdown: str = ""
+
+    try:
+        cleaned_html, title, byline = extract(raw_html, entry_url)
+    except Exception:
+        logger.exception("Readability extraction failed for entry %d", entry_id)
+        try:
+            cleaned_html = sanitize(raw_html, entry_url)
+        except Exception:
+            logger.exception("Sanitize fallback also failed for entry %d", entry_id)
+        status = "partial"
+
+    # Stage 2: Sanitize
+    try:
+        cleaned_html = sanitize(cleaned_html, entry_url)
+    except Exception:
+        logger.exception("Sanitize failed for entry %d", entry_id)
+
+    # Stage 3: Convert to Markdown
+    try:
+        markdown = convert_to_markdown(cleaned_html)
+    except Exception:
+        logger.exception("Markdown conversion failed for entry %d", entry_id)
+        markdown = ""
+        if status == "success":
+            status = "partial"
+
+    word_count = len(markdown.split()) if markdown else len(cleaned_html.split())
+
+    result = CleanedResult(
+        cleaned_html=cleaned_html,
+        cleaned_markdown=markdown,
+        word_count=word_count,
+        status=status,
+        title=title,
+        byline=byline,
+    )
+
+    # Stage 4: Cache
+    try:
+        conn.execute(
+            """
+            INSERT INTO entry_cleaned
+                (entry_id, cleaned_html, cleaned_markdown, word_count, status, source_hash, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(entry_id) DO UPDATE SET
+                cleaned_html = excluded.cleaned_html,
+                cleaned_markdown = excluded.cleaned_markdown,
+                word_count = excluded.word_count,
+                status = excluded.status,
+                source_hash = excluded.source_hash,
+                updated_at = excluded.updated_at
+            """,
+            (
+                entry_id,
+                cleaned_html,
+                markdown,
+                word_count,
+                status,
+                source_hash,
+                _utc_now(),
+            ),
+        )
+        conn.commit()
+    except Exception:
+        logger.exception("Failed to cache cleaned result for entry %d", entry_id)
+
+    return result

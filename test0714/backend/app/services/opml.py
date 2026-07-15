@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+import xml.etree.ElementTree as ET
+from dataclasses import dataclass
+from typing import Optional
+from xml.dom import minidom
+
+
+@dataclass
+class OPMLFeed:
+    title: str
+    feed_url: str
+    site_url: Optional[str] = None
+
+
+def parse_opml(content: str | bytes) -> list[OPMLFeed]:
+    if isinstance(content, bytes):
+        content = content.decode("utf-8", errors="replace")
+    root = ET.fromstring(content)
+    feeds: list[OPMLFeed] = []
+    seen: set[str] = set()
+
+    for outline in root.iter("outline"):
+        feed_url = outline.attrib.get("xmlUrl") or outline.attrib.get("xmlurl")
+        if not feed_url:
+            continue
+        feed_url = feed_url.strip()
+        if not feed_url or feed_url in seen:
+            continue
+        seen.add(feed_url)
+        title = (
+            outline.attrib.get("text")
+            or outline.attrib.get("title")
+            or feed_url
+        ).strip()
+        site_url = outline.attrib.get("htmlUrl") or outline.attrib.get("htmlurl")
+        feeds.append(
+            OPMLFeed(
+                title=title,
+                feed_url=feed_url,
+                site_url=site_url.strip() if site_url else None,
+            )
+        )
+    return feeds
+
+
+def export_opml(feeds: list[OPMLFeed], title: str = "Subscriptions") -> str:
+    opml = ET.Element("opml", version="2.0")
+    head = ET.SubElement(opml, "head")
+    ET.SubElement(head, "title").text = title
+    body = ET.SubElement(opml, "body")
+    for feed in feeds:
+        attrs = {
+            "text": feed.title,
+            "title": feed.title,
+            "type": "rss",
+            "xmlUrl": feed.feed_url,
+        }
+        if feed.site_url:
+            attrs["htmlUrl"] = feed.site_url
+        ET.SubElement(body, "outline", attrs)
+
+    rough = ET.tostring(opml, encoding="utf-8")
+    parsed = minidom.parseString(rough)
+    return parsed.toprettyxml(indent="  ", encoding="utf-8").decode("utf-8")

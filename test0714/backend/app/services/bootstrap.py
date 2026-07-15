@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+
+from app.db import connect
+from app.services.opml import parse_opml
+from app.services.sync import sync_feeds, utc_now
+
+logger = logging.getLogger(__name__)
+
+ROOT = Path(__file__).resolve().parents[3]
+STARTER_OPML = ROOT / "fixtures" / "mercury-starter.opml"
+
+
+def import_missing_starter_feeds() -> list[tuple[int, str]]:
+    """Import feeds from mercury-starter.opml that are not yet in DB.
+
+    Returns list of (feed_id, feed_url) for newly inserted feeds.
+    """
+    if not STARTER_OPML.exists():
+        logger.warning("Starter OPML not found: %s", STARTER_OPML)
+        return []
+
+    feeds = parse_opml(STARTER_OPML.read_bytes())
+    newly: list[tuple[int, str]] = []
+    conn = connect()
+    try:
+        now = utc_now()
+        for item in feeds:
+            existing = conn.execute(
+                "SELECT id FROM feeds WHERE feed_url = ?", (item.feed_url,)
+            ).fetchone()
+            if existing:
+                continue
+            cur = conn.execute(
+                """
+                INSERT INTO feeds (title, feed_url, site_url, last_fetched_at, created_at)
+                VALUES (?, ?, ?, NULL, ?)
+                """,
+                (item.title, item.feed_url, item.site_url, now),
+            )
+            newly.append((int(cur.lastrowid), item.feed_url))
+        conn.commit()
+    finally:
+        conn.close()
+
+    if newly:
+        logger.info("Imported %d starter feeds from %s", len(newly), STARTER_OPML.name)
+    return newly
+
+
+async def bootstrap_starter_feeds() -> None:
+    newly = import_missing_starter_feeds()
+    if not newly:
+        return
+    conn = connect()
+    try:
+        results = await sync_feeds(conn, newly)
+        ok = sum(1 for r in results if r[2])
+        inserted = sum(r[3] for r in results)
+        logger.info(
+            "Starter sync done: %d/%d ok, %d entries inserted",
+            ok,
+            len(results),
+            inserted,
+        )
+    finally:
+        conn.close()
