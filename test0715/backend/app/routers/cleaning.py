@@ -50,6 +50,8 @@ def get_reading_preferences(
         font_family=prefs.font_family,
         display_mode=prefs.display_mode,
         split_ratio=prefs.split_ratio,
+        left_width=prefs.left_width,
+        middle_width=prefs.middle_width,
     )
 
 
@@ -66,6 +68,8 @@ def save_reading_preferences(
         font_family=body.font_family if body.font_family is not None else current.font_family,
         display_mode=body.display_mode if body.display_mode is not None else current.display_mode,
         split_ratio=body.split_ratio if body.split_ratio is not None else current.split_ratio,
+        left_width=body.left_width if body.left_width is not None else current.left_width,
+        middle_width=body.middle_width if body.middle_width is not None else current.middle_width,
     )
     saved = save_preferences(conn, updated)
     return ReadingPreferenceOut(
@@ -75,4 +79,6 @@ def save_reading_preferences(
         font_family=saved.font_family,
         display_mode=saved.display_mode,
         split_ratio=saved.split_ratio,
+        left_width=saved.left_width,
+        middle_width=saved.middle_width,
     )

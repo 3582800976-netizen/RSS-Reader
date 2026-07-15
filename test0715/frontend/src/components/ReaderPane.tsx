@@ -2,6 +2,7 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { api, Entry, TranslationParagraph } from "../api";
+import AiActionButton from "./AiActionButton";
 import MarkdownBody from "./MarkdownBody";
 import {
   AI_LANGUAGES,
@@ -201,28 +202,34 @@ export default function ReaderPane({
     );
   }
 
-  async function runSummary(force = false) {
+  async function runSummary(force = false, language = summaryLang) {
     setSummaryOpen(true);
+
+    // 已有相同语言缓存且非强制，直接展示，不再调用 API
+    if (!force && summaryText && summarizedLang === language) {
+      return;
+    }
+
     setSummaryStreaming(true);
     setSummaryText("");
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
     const needForce =
-      force || (!!summarizedLang && summarizedLang !== summaryLang);
+      force || (!!summarizedLang && summarizedLang !== language);
     try {
       await api.streamSummary(
         {
           entry_id: entry.id,
           detail_level: detailLevel,
-          target_language: summaryLang,
+          target_language: language,
           force: needForce,
         },
         {
           onDelta: (t) => setSummaryText((prev) => prev + t),
           onDone: (info) => {
-            setSummarizedLang(info?.target_language || summaryLang);
-            onStatus?.(`摘要完成（${info?.target_language || summaryLang}）`);
+            setSummarizedLang(info?.target_language || language);
+            onStatus?.(`摘要完成（${info?.target_language || language}）`);
           },
           onError: (err) => onStatus?.(err),
         },
@@ -323,50 +330,38 @@ export default function ReaderPane({
       <div className="pane-head row">
         <span>阅读</span>
         <div className="detail-actions">
-          <button
-            type="button"
-            className="ghost"
+          <AiActionButton
+            label="AI 摘要"
+            lang={summaryLang}
+            languages={AI_LANGUAGES}
             disabled={locked}
-            onClick={() => runSummary(false)}
-          >
-            摘要
-          </button>
-          <select
-            className="ai-lang"
-            title="翻译目标语言"
-            disabled={locked}
-            value={targetLang}
-            onChange={(e) => {
-              const lang = e.target.value;
-              setTargetLang(lang);
-              saveTranslateLanguage(lang);
+            onRun={(lang) => runSummary(false, lang)}
+            onLangChange={(lang) => {
+              setSummaryLang(lang);
+              saveSummaryLanguage(lang);
             }}
-          >
-            {AI_LANGUAGES.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className={`ghost ${bilingual ? "active-ai" : ""}`}
+          />
+          <AiActionButton
+            label={bilingual ? "清除翻译" : "AI 翻译"}
+            lang={targetLang}
+            languages={AI_LANGUAGES}
             disabled={locked}
-            onClick={() => {
-              if (bilingual) {
+            enableMenu={!bilingual}
+            onRun={(lang) => {
+              if (bilingual && lang === targetLang) {
                 setBilingual(false);
                 return;
               }
-              if (paragraphs.length && !langChanged) {
-                setBilingual(true);
-                return;
-              }
-              runTranslate(langChanged, targetLang);
+              setTargetLang(lang);
+              saveTranslateLanguage(lang);
+              runTranslate(langChanged || translatedLang !== lang, lang);
             }}
-          >
-            {bilingual ? "清除翻译" : "翻译对照"}
-          </button>
-          {paragraphs.length || bilingual ? (
+            onLangChange={(lang) => {
+              setTargetLang(lang);
+              saveTranslateLanguage(lang);
+            }}
+          />
+          {bilingual ? (
             <button
               type="button"
               className="ghost"

@@ -105,6 +105,8 @@ export type ReadingPrefs = {
   font_family: string;
   display_mode: string;
   split_ratio: number;
+  left_width: number;
+  middle_width: number;
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

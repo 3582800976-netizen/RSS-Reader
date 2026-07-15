@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, Entry, Feed, Stats } from "./api";
 import AgentSettingsModal from "./components/AgentSettingsModal";
+import DisplaySettingsModal from "./components/DisplaySettingsModal";
 import EntryList from "./components/EntryList";
 import ReaderPane from "./components/ReaderPane";
+import Resizer from "./components/Resizer";
 import Sidebar from "./components/Sidebar";
 import StatusBar from "./components/StatusBar";
 import TopBar from "./components/TopBar";
@@ -34,7 +36,10 @@ export default function App() {
   const [theme, setTheme] = useState<ThemeMode>(() => loadTheme());
   const [fontSize, setFontSize] = useState<FontSize>(() => loadFontSize());
   const [readingMode, setReadingMode] = useState<ReadingMode>(() => loadReadingMode());
+  const [leftWidth, setLeftWidth] = useState(240);
+  const [middleWidth, setMiddleWidth] = useState(320);
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -89,6 +94,8 @@ export default function App() {
         setTheme(prefs.theme as ThemeMode);
         setFontSize(String(prefs.font_size) as FontSize);
         setReadingMode(prefs.display_mode as ReadingMode);
+        if (prefs.left_width) setLeftWidth(prefs.left_width);
+        if (prefs.middle_width) setMiddleWidth(prefs.middle_width);
       })
       .catch(() => undefined);
   }, []);
@@ -122,13 +129,7 @@ export default function App() {
         search={search}
         onSearchChange={setSearch}
         busy={busy}
-        theme={theme}
-        fontSize={fontSize}
         readingMode={readingMode}
-        onThemeChange={(t) => setTheme(t)}
-        onFontCycle={() =>
-          setFontSize((s) => (s === "S" ? "M" : s === "M" ? "L" : "S"))
-        }
         onReadingMode={setReadingMode}
         onSyncAll={() =>
           withBusy(async () => {
@@ -137,12 +138,21 @@ export default function App() {
             setStatus(`同步完成：成功 ${r.ok_count}，失败 ${r.fail_count}，新增 ${r.inserted_total}`);
           })
         }
-        onImportOpml={() => fileRef.current?.click()}
-        onExportOpml={() => withBusy(() => api.exportOpml(), "已导出 OPML")}
         onOpenAiSettings={() => setAiSettingsOpen(true)}
+        onOpenDisplaySettings={() => setDisplaySettingsOpen(true)}
       />
 
       <AgentSettingsModal open={aiSettingsOpen} onClose={() => setAiSettingsOpen(false)} />
+      <DisplaySettingsModal
+        open={displaySettingsOpen}
+        theme={theme}
+        fontSize={fontSize}
+        onClose={() => setDisplaySettingsOpen(false)}
+        onThemeChange={(t) => setTheme(t)}
+        onFontCycle={() =>
+          setFontSize((s) => (s === "S" ? "M" : s === "M" ? "L" : "S"))
+        }
+      />
 
       <input
         ref={fileRef}
@@ -190,6 +200,7 @@ export default function App() {
           listView={listView}
           feedUrl={feedUrl}
           busy={busy}
+          style={{ width: leftWidth, flexShrink: 0 }}
           onFeedUrlChange={setFeedUrl}
           onAddFeed={(e) => {
             e.preventDefault();
@@ -226,12 +237,22 @@ export default function App() {
               setStatus("已删除订阅源");
             })
           }
+          onImportOpml={() => fileRef.current?.click()}
+          onExportOpml={() => withBusy(() => api.exportOpml(), "已导出 OPML")}
+        />
+
+        <Resizer
+          onResize={(d) => setLeftWidth((w) => Math.min(Math.max(w + d, 180), 400))}
+          onResizeEnd={() =>
+            api.saveReadingPrefs({ left_width: leftWidth }).catch(() => undefined)
+          }
         />
 
         <EntryList
           entries={entries}
           selectedId={selectedEntry?.id ?? null}
           busy={busy}
+          style={{ width: middleWidth, flexShrink: 0 }}
           onSelect={(entry) => {
             setSelectedEntry(entry);
             if (!entry.is_read) {
@@ -260,6 +281,13 @@ export default function App() {
               await reload();
               setStatus(`已标为已读：${r.updated} 篇`);
             })
+          }
+        />
+
+        <Resizer
+          onResize={(d) => setMiddleWidth((w) => Math.min(Math.max(w + d, 200), 480))}
+          onResizeEnd={() =>
+            api.saveReadingPrefs({ middle_width: middleWidth }).catch(() => undefined)
           }
         />
 

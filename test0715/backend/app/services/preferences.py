@@ -12,6 +12,8 @@ class ReadingPreferences:
     font_family: str = "system"
     display_mode: str = "reader"
     split_ratio: float = 0.5
+    left_width: int = 240
+    middle_width: int = 320
 
 
 def get_preferences(conn: sqlite3.Connection) -> ReadingPreferences:
@@ -27,6 +29,8 @@ def get_preferences(conn: sqlite3.Connection) -> ReadingPreferences:
         font_family=row["font_family"] or "system",
         display_mode=row["display_mode"] or "reader",
         split_ratio=row["split_ratio"] or 0.5,
+        left_width=row["left_width"] if row["left_width"] is not None else 240,
+        middle_width=row["middle_width"] if row["middle_width"] is not None else 320,
     )
 
 
@@ -37,15 +41,17 @@ def save_preferences(
     conn.execute(
         """
         INSERT INTO reading_preferences
-            (id, theme, font_size, line_height, font_family, display_mode, split_ratio)
-        VALUES (1, ?, ?, ?, ?, ?, ?)
+            (id, theme, font_size, line_height, font_family, display_mode, split_ratio, left_width, middle_width)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             theme = excluded.theme,
             font_size = excluded.font_size,
             line_height = excluded.line_height,
             font_family = excluded.font_family,
             display_mode = excluded.display_mode,
-            split_ratio = excluded.split_ratio
+            split_ratio = excluded.split_ratio,
+            left_width = excluded.left_width,
+            middle_width = excluded.middle_width
         """,
         (
             prefs.theme,
@@ -54,6 +60,8 @@ def save_preferences(
             prefs.font_family,
             prefs.display_mode,
             prefs.split_ratio,
+            prefs.left_width,
+            prefs.middle_width,
         ),
     )
     conn.commit()

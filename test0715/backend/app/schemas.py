@@ -230,6 +230,8 @@ class ReadingPreferenceIn(BaseModel):
     font_family: Optional[str] = None
     display_mode: Optional[str] = None
     split_ratio: Optional[float] = None
+    left_width: Optional[int] = None
+    middle_width: Optional[int] = None
 
 
 class ReadingPreferenceOut(BaseModel):
@@ -239,3 +241,5 @@ class ReadingPreferenceOut(BaseModel):
     font_family: str = "system"
     display_mode: str = "reader"
     split_ratio: float = 0.5
+    left_width: int = 240
+    middle_width: int = 320

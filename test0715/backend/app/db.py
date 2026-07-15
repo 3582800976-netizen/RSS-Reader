@@ -136,6 +136,8 @@ def init_db() -> None:
                 font_family TEXT NOT NULL DEFAULT 'system',
                 display_mode TEXT NOT NULL DEFAULT 'reader',
                 split_ratio REAL NOT NULL DEFAULT 0.5,
+                left_width INTEGER NOT NULL DEFAULT 240,
+                middle_width INTEGER NOT NULL DEFAULT 320,
                 CHECK (id = 1)
             );
             """
@@ -152,6 +154,18 @@ def init_db() -> None:
             "entry_summaries",
             "target_language",
             "target_language TEXT",
+        )
+        _ensure_column(
+            conn,
+            "reading_preferences",
+            "left_width",
+            "left_width INTEGER NOT NULL DEFAULT 240",
+        )
+        _ensure_column(
+            conn,
+            "reading_preferences",
+            "middle_width",
+            "middle_width INTEGER NOT NULL DEFAULT 320",
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_entries_is_starred ON entries(is_starred)"

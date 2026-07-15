@@ -5,6 +5,7 @@ type Props = {
   entries: Entry[];
   selectedId: number | null;
   busy: boolean;
+  style?: React.CSSProperties;
   onSelect: (entry: Entry) => void;
   onToggleStar: (entry: Entry) => void;
   onMarkAllRead: () => void;
@@ -14,12 +15,13 @@ export default function EntryList({
   entries,
   selectedId,
   busy,
+  style,
   onSelect,
   onToggleStar,
   onMarkAllRead,
 }: Props) {
   return (
-    <section className="pane entries">
+    <section className="pane entries" style={style}>
       <div className="pane-head row">
         <span>文章</span>
         <button type="button" className="text-btn" disabled={busy} onClick={onMarkAllRead}>

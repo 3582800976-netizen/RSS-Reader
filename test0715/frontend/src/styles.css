@@ -265,8 +265,9 @@ button:disabled {
 .layout {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: 240px 320px 1fr;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
 }
 
 .pane {
@@ -280,31 +281,63 @@ button:disabled {
   background: var(--bg-elevated);
 }
 
+.pane.entries {
+  flex-shrink: 0;
+}
+
 .pane.detail {
+  flex: 1;
+  min-width: 0;
   border-right: none;
   position: relative;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.pane.detail > .pane-head {
+  flex-shrink: 0;
+  overflow: visible;
+  z-index: 30;
+}
+
+.resizer {
+  flex: 0 0 6px;
+  width: 6px;
+  min-height: 0;
+  cursor: col-resize;
+  background: var(--line);
+  border-right: 1px solid var(--line);
+  transition: background 0.15s;
+  position: relative;
+  z-index: 1;
+}
+
+.resizer:hover,
+.resizer.dragging {
+  background: var(--accent);
 }
 
 .pane-head {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 0.7rem 0.9rem;
+  height: 42px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  padding: 0 0.9rem;
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
   background: inherit;
   border-bottom: 1px solid var(--line);
+  box-sizing: border-box;
 }
 
 .pane-head.row {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
   text-transform: none;
   letter-spacing: 0;
   font-size: 0.8rem;
@@ -439,6 +472,65 @@ button:disabled {
   color: var(--danger);
 }
 
+.feed-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.opml-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  height: 26px;
+  padding: 0 0.45rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.opml-btn svg {
+  flex-shrink: 0;
+}
+
+.opml-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.opml-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .entry-item {
   display: flex;
   align-items: stretch;
@@ -521,8 +613,32 @@ button:disabled {
   display: flex;
   gap: 0.25rem;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  min-width: 0;
+  overflow: visible;
+}
+
+.detail-actions-scroll {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+}
+
+.detail-actions-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.detail-actions button,
+.detail-actions a,
+.detail-actions select {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .detail-actions select.ai-lang {
@@ -533,6 +649,69 @@ button:disabled {
   padding: 0.25rem 0.4rem;
   font-size: 0.78rem;
   max-width: 7.5rem;
+}
+
+.ai-action {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.ai-action > button {
+  padding: 0.38rem 0.6rem;
+  line-height: 1.2;
+}
+
+.ai-action-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: max(100%, 7.5rem);
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 40;
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.ai-action:hover .ai-action-menu,
+.ai-action.open .ai-action-menu {
+  display: flex;
+  pointer-events: auto;
+}
+
+.ai-action-menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  padding: 0.38rem 0.6rem;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-action-menu-item:last-child {
+  border-bottom: none;
+}
+
+.ai-action-menu-item:hover,
+.ai-action-menu-item.active {
+  background: var(--bg-hover);
+}
+
+.ai-action-menu-item.active {
+  color: var(--accent);
 }
 
 .pane.detail > .article,
@@ -712,6 +891,41 @@ button:disabled {
   color: var(--text-secondary);
 }
 
+.display-settings-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.display-option-btn {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 0.55rem 0.4rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.display-option-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.display-option-btn.active {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 .provider-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -722,6 +936,9 @@ button:disabled {
 .agent-bind-grid input,
 .agent-bind-grid select {
   width: 100%;
+  height: 36px;
+  min-height: 36px;
+  box-sizing: border-box;
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--line);
@@ -915,14 +1132,16 @@ button:disabled {
   .provider-form,
   .agent-bind-grid,
   .bilingual-row,
-  .usage-grid {
-    grid-template-columns: 1fr;
+  .usage-grid,
+  .display-settings-options {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 .article {
   padding: 1.4rem 1.75rem 2.5rem;
-  max-width: var(--reader-max);
+  max-width: none;
+  width: 100%;
 }
 
 .article h1 {
@@ -1067,26 +1286,34 @@ button:disabled {
   .topbar {
     grid-template-columns: 1fr;
   }
-
-  .layout {
-    grid-template-columns: 200px 260px 1fr;
-  }
 }
 
 @media (max-width: 860px) {
   .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto 1fr;
+    flex-direction: column;
+    overflow: auto;
   }
 
-  .pane {
+  .pane,
+  .pane.feeds,
+  .pane.entries {
+    width: 100% !important;
     border-right: none;
     border-bottom: 1px solid var(--line);
     max-height: 260px;
+    flex: none;
   }
 
   .pane.detail {
     max-height: none;
+    flex: 1;
+  }
+
+  .resizer {
+    flex: 0 0 4px;
+    width: 100%;
+    height: 4px;
+    cursor: row-resize;
   }
 
   .dual {
