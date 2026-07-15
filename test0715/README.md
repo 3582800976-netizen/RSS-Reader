@@ -1,25 +1,362 @@
-﻿# RSS Reader · test0715本地优先的 Web RSS 阅读器，对应作业必做① + ②：**Feed / OPML 解析 + Sync + 内容清洗 + 内容呈现**在①②基础上已扩展 **P1 / P2**（收藏、筛选、搜索、阅读主题与双栏等）及 **AI 智能体**（摘要 / 翻译），界面为深色三栏阅读布局（参考 [Mercury](https://github.com/neolee/mercury) 观感，不移植 SwiftUI）。---## 快速开始```bashcd test0715chmod +x frontend/node_modules/.bin/*./run.sh```浏览器打开：**[http://127.0.0.1:6789](http://127.0.0.1:6789)**`run.sh` 会：1. 准备 Python venv 并安装后端依赖2. `npm install` + 构建前端3. 若 6789 被占用则结束旧进程4. 启动 FastAPI（`/api` + 前端静态资源同端口）启动时会从 `fixtures/mercury-starter.opml` 自动补齐 Mercury 官方 **11 个示例订阅源**（已存在则跳过并后台同步）。---## 功能一览### 必做①| 能力   | 说明                                      || ---- | --------------------------------------- || Feed | 添加 / 列表 / 删除；`feedparser` 解析 RSS/Atom   || Sync | 单源 / 全量；`(feed_id, guid)` 去重            || OPML | 导入 / 导出（扁平 outline）                     || 内容呈现 | 三栏：订阅源 / 文章列表 / 详情（Feed 摘要 + DOMPurify） |### 必做②| 能力               | 说明                                                                                              || ---------------- | ----------------------------------------------------------------------------------------------- || Cleaned HTML     | `readability-lxml` 正文提取 + `bleach` 标签白名单过滤 + 相对链接补全                                             || Cleaned Markdown | `html2text` 转换 + 基于清洗内容 `source_hash` 增量缓存                                                      || 定制样式             | 正文字体 / 行高 / 字号 + 4 种阅读主题（深色 / 浅色 / 怀旧 / GitHub）+ 双栏比例拖拽，`reading_preferences` 服务端持久化            || 阅读功能渲染           | `react-markdown` + GFM 表格 / 任务列表 + `rehype-highlight` 代码高亮；MarkdownBody 组件自动拉取清洗内容，失败降级为原始 HTML |### P1- 收藏（星标）  - 侧栏视图：全部 / 未读 / 收藏  - 底部状态栏：订阅源数 · 文章数 · 未读 · 收藏 · 上次同步  - 当前范围「全部标为已读」### P2- 顶栏关键词搜索（标题 / 摘要）  - 深色 / 浅色主题、字号 S/M/L（`localStorage` 持久化）  - 阅读模式：阅读 / 网页（iframe）/ 双栏### AI（本期已接入）- Provider 自配（OpenAI 兼容：DeepSeek / OpenAI / Ollama 等）- 流式摘要（SSE）+ 缓存- 段落级双语翻译 + 单段重试- Token 用量统计（本地 `llm_usages`）- 顶栏「AI 设置」；阅读区「摘要 / 翻译对照」### 线程分离（本期新增）
+﻿# RSS Reader · test0715
 
-| 能力           | 说明                                                                 |
-| -------------- | -------------------------------------------------------------------- |
-| OPML 异步导入  | 解析+入库在主线程同步完成，Feed 文章同步 `asyncio.create_task` 后台执行 |
-| 进度轮询       | `GET /api/opml/import-status/{job_id}` 实时返回同步进度与结果         |
-| 非阻塞 UI      | 导入后侧栏立即可见新源，同步期间可正常浏览、搜索，状态栏实时显示进度     |
+> 本地优先（Local-first）的 Web RSS 阅读器。
+>
+> 实现课程作业必做① + ②：Feed / OPML 管理、内容清洗与阅读渲染，并扩展收藏、搜索、阅读主题以及 AI 智能摘要与翻译。
 
+参考项目：[Mercury](https://github.com/neolee/mercury)（仅参考交互设计，不移植 SwiftUI）。
 
-**未包含**：笔记文摘、标签 Agent、Electron 打包。---## 必做② 架构（四级清洗管道）```entries.summary / content        │   ┌────▼────  Stage 1: Extract   │  readability-lxml → Document.summary()   │  失败降级 → bleach.sanitize 原 HTML   └────┬────   ┌────▼────  Stage 2: Sanitize   │  bleach.clean(tags, attrs, strip=True)   │  BeautifulSoup 补全相对链接 (urljoin)   └────┬────   ┌────▼────  Stage 3: Convert   │  html2text.HTML2Text(ignore_links=False)   │  → Cleaned Markdown + word_count   └────┬────   ┌────▼────  Stage 4: Cache   │  INSERT INTO entry_cleaned   │  ON CONFLICT(entry_id) DO UPDATE   │  增量判断: source_hash (SHA-256)   └───────────        │   GET /api/entries/{id}/cleaned        │   ┌────▼────  前端消费   │  MarkdownBody.tsx   │  react-markdown + GFM + rehype-highlight   │  失败 → <div dangerouslySetInnerHTML> 降级   └───────────```---## 技术栈| 层    | 选型                                                             || ---- | -------------------------------------------------------------- || 前端   | React + Vite + TypeScript + DOMPurify + react-markdown         || 后端   | Python FastAPI + SQLite                                        || Feed | `feedparser` + `httpx`                                         || 清洗   | `readability-lxml` + `bleach` + `beautifulsoup4` + `html2text` || OPML | `xml.etree`                                                    || AI   | `openai`（兼容 DeepSeek / Ollama 等）                               || 运行   | `127.0.0.1:6789` 单端口                                           |---## 目录结构```texttest0715/  run.sh  fixtures/mercury-starter.opml  data/    app.db                   # 运行后生成    prompts/agents.yaml      # AI 提示词（可热编辑）  backend/    requirements.txt    app/      main.py      db.py                  # 含 is_starred / entry_cleaned / reading_preferences 迁移      schemas.py      services/              # feed_parser / opml / sync / bootstrap / cleaning / llm_client / segmenter / prompts / preferences / usage      routers/               # feeds / entries / opml / sync / stats / providers / agents / cleaning / usages  frontend/    src/      App.tsx      api.ts      prefs.ts               # 主题 / 字号 / 阅读模式      styles.css      components/        TopBar.tsx        Sidebar.tsx        EntryList.tsx        ReaderPane.tsx        MarkdownBody.tsx     # 清洗后 Markdown 渲染（②）        StatusBar.tsx        AgentSettingsModal.tsx        UsageCharts.tsx```---## 主要 API| 方法                    | 路径                                                | 说明                                             || --------------------- | ------------------------------------------------- | ---------------------------------------------- || GET/POST              | `/api/feeds`                                      | 列表 / 添加                                        || DELETE                | `/api/feeds/{id}`                                 | 删除                                             || POST                  | `/api/feeds/{id}/sync`                            | 同步单源                                           || POST                  | `/api/sync`                                       | 同步全部                                           || GET                   | `/api/entries`                                    | 列表（`feed_id` / `is_read` / `is_starred` / `q`） || GET/PATCH             | `/api/entries/{id}`                               | 详情；更新已读 / 收藏                                   || POST                  | `/api/entries/mark-read`                          | 批量标已读（可选 `feed_id`）                            || GET                   | `/api/stats`                                      | 统计                                             || POST/GET              | `/api/opml/import` · `/export`                    | OPML                                           || GET                   | `/api/opml/import-status/{job_id}`            | OPML 后台同步进度                                  ||| GET                   | `/api/health`                                     | 健康检查                                           || GET                   | `/docs`                                           | Swagger                                        || GET                   | `/api/entries/{id}/cleaned`                       | 内容清洗②                                          || GET/POST              | `/api/preferences/reading`                        | 阅读偏好                                           || GET/POST/PATCH/DELETE | `/api/ai/providers`                               | LLM Provider 管理                                || POST                  | `/api/ai/providers/test`                          | 连通性测试                                          || GET/PUT               | `/api/ai/settings` · `/api/ai/settings/{agent}`   | 智能体设置                                          || GET/POST              | `/api/ai/summary/{id}` · `/api/ai/summary/stream` | 摘要缓存 / 流式摘要                                    || GET/POST/DELETE       | `/api/ai/translate...`                            | 翻译 / 重试 / 清除                                   || GET                   | `/api/ai/usages` · `/summary`                     | Token 用量                                       |---## 环境要求- Python 3.10+  - Node.js + npm  - macOS / Linux；Windows 可用 Git Bash 或 WSL 运行 `run.sh`---## 说明- 数据仅存本机 `data/app.db`，无需登录。  - 正文经 `readability-lxml` 四级管道清洗为 Cleaned HTML + Cleaned Markdown，AI 摘要 / 翻译均基于清洗后 Markdown 或 HTML 分段。  - 部分站点禁止 iframe，「网页 / 双栏」可能空白，可用「打开原文」。  - AI 提示词存在 `data/prompts/agents.yaml`，可热编辑，损坏自动回退默认。
+---
 
+# 功能特性
 
-## 2025-07-15 更新：OPML 导入线程分离
+## 必做① Feed 管理
 
-将 OPML 导入时的 Feed 文章同步从主线程迁至后台 `asyncio.create_task` 异步执行，避免 UI 阻塞。
+- RSS / Atom 订阅源管理
+- 添加、删除订阅源
+- 单源同步 / 全部同步
+- Feed 去重（`feed_id + guid`）
+- OPML 导入 / 导出
+- 三栏阅读界面
+  - 左侧：订阅源
+  - 中间：文章列表
+  - 右侧：文章详情
 
-**后端改动：**
-- `POST /api/opml/import` 解析入库后立即返回，后台异步同步所有源
-- 新增 `GET /api/opml/import-status/{job_id}` 查询同步进度（status / total / synced / ok / fail / inserted）
-- `ImportResult` schema 增加 `job_id` 字段
+---
 
-**前端改动：**
-- 导入后不再 `await syncAll()` 阻塞 UI
-- 改为每 1.5s 轮询 `importStatus`，状态栏实时显示「后台同步中：N/M 个源」
-- 同步期间界面保持可交互，侧栏立即可见新订阅源
+## 必做② 内容清洗
+
+采用四级内容处理流水线：
+
+```text
+Raw HTML
+    │
+    ▼
+Readability 提取正文
+    │
+    ▼
+Bleach 白名单清洗
+    │
+    ▼
+BeautifulSoup 修正链接
+    │
+    ▼
+html2text 转 Markdown
+    │
+    ▼
+SQLite 增量缓存
+```
+
+支持：
+
+- Cleaned HTML
+- Cleaned Markdown
+- SHA-256 增量缓存
+- Markdown 渲染
+- GitHub Flavored Markdown（GFM）
+- Task List
+- 代码高亮
+- 自动降级显示原始 HTML
+
+---
+
+## P1 扩展功能
+
+- 收藏（Star）
+- 全部 / 未读 / 收藏筛选
+- 全部标记已读
+- 底部状态栏
+  - Feed 数量
+  - 文章数量
+  - 未读数量
+  - 收藏数量
+  - 最近同步时间
+
+---
+
+## P2 扩展功能
+
+- 标题 / 摘要关键词搜索
+- 阅读模式
+  - 阅读模式
+  - 网页模式（iframe）
+  - 双栏模式
+- 阅读主题
+  - 深色
+  - 浅色
+  - GitHub
+  - 怀旧
+- 字号
+  - S
+  - M
+  - L
+- 双栏宽度拖拽
+- 阅读设置持久化
+
+---
+
+## AI 功能
+
+支持 OpenAI Compatible Provider：
+
+- OpenAI
+- DeepSeek
+- Ollama
+
+功能包括：
+
+- 流式摘要（SSE）
+- 摘要缓存
+- 段落级双语翻译
+- 单段重试
+- Token 使用统计
+- Provider 管理
+- Prompt 热更新
+
+---
+
+## OPML 后台导入（线程分离）
+
+新版采用后台异步同步：
+
+```text
+POST /api/opml/import
+
+        │
+        ▼
+
+解析 OPML
+
+        │
+        ▼
+
+Feed 入库
+
+        │
+        ▼
+
+立即返回
+
+        │
+        ▼
+
+asyncio.create_task()
+
+后台同步 Feed
+```
+
+特点：
+
+- UI 不阻塞
+- 导入立即完成
+- 后台同步 Feed
+- 状态栏实时显示同步进度
+- 用户可继续浏览文章
+
+---
+
+# 技术架构
+
+```text
+                React + TypeScript
+                        │
+                REST API (FastAPI)
+                        │
+        ┌───────────────┴───────────────┐
+        │                               │
+   Feed Parser                     AI Agent
+(feedparser/httpx)            OpenAI Compatible
+        │                               │
+        └───────────────┬───────────────┘
+                        │
+                 Cleaning Pipeline
+                        │
+      readability-lxml → bleach
+      → BeautifulSoup → html2text
+                        │
+                    SQLite
+```
+
+---
+
+# 技术栈
+
+| 模块 | 技术 |
+|------|------|
+| Frontend | React + Vite + TypeScript |
+| Backend | FastAPI |
+| Database | SQLite |
+| Feed Parser | feedparser + httpx |
+| Content Cleaning | readability-lxml + bleach + BeautifulSoup4 + html2text |
+| Markdown | react-markdown + remark-gfm + rehype-highlight |
+| AI | OpenAI SDK（兼容 DeepSeek / Ollama） |
+| Storage | Local-first |
+| Server | FastAPI + StaticFiles |
+
+---
+
+# 项目结构
+
+```text
+test0715/
+│
+├── run.sh
+├── fixtures/
+│   └── mercury-starter.opml
+│
+├── data/
+│   ├── app.db
+│   └── prompts/
+│       └── agents.yaml
+│
+├── backend/
+│   ├── requirements.txt
+│   └── app/
+│       ├── main.py
+│       ├── db.py
+│       ├── schemas.py
+│       ├── routers/
+│       │   ├── feeds.py
+│       │   ├── entries.py
+│       │   ├── opml.py
+│       │   ├── sync.py
+│       │   ├── stats.py
+│       │   ├── providers.py
+│       │   ├── agents.py
+│       │   ├── cleaning.py
+│       │   └── usages.py
+│       └── services/
+│           ├── bootstrap.py
+│           ├── cleaning.py
+│           ├── feed_parser.py
+│           ├── llm_client.py
+│           ├── opml.py
+│           ├── preferences.py
+│           ├── prompts.py
+│           ├── segmenter.py
+│           ├── sync.py
+│           └── usage.py
+│
+└── frontend/
+    ├── src/
+    │   ├── api.ts
+    │   ├── prefs.ts
+    │   ├── App.tsx
+    │   ├── styles.css
+    │   └── components/
+    │       ├── Sidebar.tsx
+    │       ├── EntryList.tsx
+    │       ├── ReaderPane.tsx
+    │       ├── MarkdownBody.tsx
+    │       ├── StatusBar.tsx
+    │       ├── TopBar.tsx
+    │       ├── AgentSettingsModal.tsx
+    │       └── UsageCharts.tsx
+```
+
+---
+
+# 快速开始
+
+## 环境要求
+
+- Python 3.10+
+- Node.js
+- npm
+
+Windows 推荐：
+
+- Git Bash
+- WSL
+
+---
+
+## 运行
+
+```bash
+cd test0715
+
+chmod +x frontend/node_modules/.bin/*
+
+./run.sh
+```
+
+浏览器访问：
+
+```
+http://127.0.0.1:6789
+```
+
+启动脚本将自动：
+
+1. 创建 Python 虚拟环境
+2. 安装后端依赖
+3. 安装前端依赖
+4. 构建前端
+5. 释放 6789 端口
+6. 启动 FastAPI
+7. 自动导入 Mercury 官方示例 OPML
+8. 后台同步所有示例 Feed
+
+---
+
+# 主要 API
+
+| Method | Endpoint | Description |
+|---------|----------|-------------|
+| GET / POST | `/api/feeds` | Feed 列表 / 添加 |
+| DELETE | `/api/feeds/{id}` | 删除 Feed |
+| POST | `/api/feeds/{id}/sync` | 同步单个 Feed |
+| POST | `/api/sync` | 全量同步 |
+| GET | `/api/entries` | 查询文章 |
+| GET / PATCH | `/api/entries/{id}` | 阅读状态 / 收藏 |
+| POST | `/api/entries/mark-read` | 批量标记已读 |
+| GET | `/api/stats` | 数据统计 |
+| POST | `/api/opml/import` | 导入 OPML |
+| GET | `/api/opml/export` | 导出 OPML |
+| GET | `/api/opml/import-status/{job_id}` | 后台同步进度 |
+| GET | `/api/entries/{id}/cleaned` | 获取清洗内容 |
+| GET / POST | `/api/preferences/reading` | 阅读设置 |
+| GET / POST / PATCH / DELETE | `/api/ai/providers` | Provider 管理 |
+| POST | `/api/ai/providers/test` | Provider 连通性测试 |
+| GET / PUT | `/api/ai/settings` | Agent 设置 |
+| GET / POST | `/api/ai/summary` | AI 摘要 |
+| GET / POST / DELETE | `/api/ai/translate` | AI 翻译 |
+| GET | `/api/ai/usages` | Token 用量统计 |
+| GET | `/api/health` | 健康检查 |
+| GET | `/docs` | Swagger API 文档 |
+
+---
+
+# 数据存储
+
+所有数据均保存在本地：
+
+```text
+data/app.db
+```
+
+无需账号、无需登录、无需云端同步。
+
+AI 摘要、翻译、阅读偏好等均持久化存储于本地 SQLite 数据库。
+
+---
+
+# 更新日志
+
+## 2026-07-15
+
+### OPML 导入线程分离
+
+- OPML 导入后立即返回
+- Feed 后台异步同步
+- 新增导入进度接口
+- 前端轮询同步状态
+- UI 全程保持可交互
+- 状态栏实时显示同步进度
+
+---
+
+# License
+
+This project is intended for educational purposes and course assignments.
