@@ -23,14 +23,22 @@ NOTES="$(cat <<'EOF'
 
 Apple Silicon Mac 一键安装，无需 Python / Node。
 
-### 安装
+### 重要：从 GitHub 下载后首次打开
 
-1. 下载 `Mercury Web-0716-arm64.dmg` 并打开
-2. 将 **Mercury Web** 拖入 **应用程序**
-3. 首次若被 Gatekeeper 拦截：**右键 → 打开**
-4. 启动后自动在浏览器打开阅读界面
+本安装包**未做 Apple 开发者签名**。下载后若出现：
 
-### 要求
+> Apple 无法验证「Mercury Web」是否包含可能危害 Mac 安全或泄漏隐私的恶意软件。
+
+**这是未签名应用的正常提示，不代表检测到病毒。** 请：
+
+1. 打开 DMG，将 **Mercury Web** 拖入 **应用程序**
+2. 在应用程序文件夹中 **右键 Mercury Web → 打开**
+3. 在弹窗中再次点击 **打开**
+4. 首次放行后可双击启动；浏览器将自动打开阅读界面
+
+> 请勿仅双击图标，系统可能直接拦截而无法打开。
+
+### 系统要求
 
 - macOS 12+
 - Apple Silicon（M 系列）
@@ -42,8 +50,12 @@ EOF
 )"
 
 if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
-  echo "==> Release $TAG exists, uploading asset..."
-  gh release upload "$TAG" "$DMG" --repo "$REPO" --clobber
+  echo "==> Release $TAG exists, updating notes..."
+  gh release edit "$TAG" --repo "$REPO" --notes "$NOTES"
+  if [[ -f "$DMG" ]]; then
+    echo "==> Uploading asset..."
+    gh release upload "$TAG" "$DMG" --repo "$REPO" --clobber
+  fi
 else
   echo "==> Creating release $TAG..."
   gh release create "$TAG" "$DMG" \

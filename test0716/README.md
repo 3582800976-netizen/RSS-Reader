@@ -13,11 +13,22 @@
 |---|---|
 | **下载** | [**Mercury Web-0716-arm64.dmg**](https://github.com/3582800976-netizen/RSS-Reader/releases/latest) |
 | **系统要求** | macOS 12+，Apple Silicon |
-| **首次打开** | 若提示无法验证开发者：**右键 App → 打开** |
 
-1. 在 [Releases](https://github.com/3582800976-netizen/RSS-Reader/releases/latest) 下载 DMG
-2. 拖入 **应用程序（Applications）** 后启动
-3. 浏览器将自动打开 `http://127.0.0.1:6789`
+### 重要：从 GitHub 下载后首次打开
+
+从 Releases 下载的安装包**未做 Apple 开发者签名**。macOS 可能提示：
+
+> Apple 无法验证「Mercury Web」是否包含可能危害 Mac 安全或泄漏隐私的恶意软件。
+
+**这是未签名应用的正常提示，不代表检测到病毒。** 请按以下步骤操作：
+
+1. 在 [Releases](https://github.com/3582800976-netizen/RSS-Reader/releases/latest) 下载 DMG 并打开
+2. 将 **Mercury Web** 拖入 **应用程序（Applications）**
+3. 打开应用程序文件夹，**右键 Mercury Web → 打开**
+4. 在弹窗中再次点击 **打开**
+5. 首次放行后可正常双击；浏览器将自动打开 `http://127.0.0.1:6789`
+
+> 本地构建的 DMG 可能不会出现此提示；从 GitHub 下载的文件会被系统标记为「来自网络」，因此需要上述操作。
 
 更多说明：[packaging/DISTRIBUTION.md](packaging/DISTRIBUTION.md)
 
