@@ -55,16 +55,17 @@ Mercury Web — 本地 RSS 阅读器
 【重要】从网站下载后首次打开：
 若提示「Apple 无法验证 Mercury Web 是否包含恶意软件」，
 这是未签名应用的正常提示，不是病毒。
-请在「应用程序」文件夹中：右键 Mercury Web → 打开 → 再次确认打开。
-首次放行后可正常双击。
 
-安装步骤：
-1. 将「Mercury Web.app」拖入「Applications」文件夹
-2. 按上述方式首次打开
-3. 应用会自动在浏览器中打开 http://127.0.0.1:6789
+正确方式：
+1. 将「Mercury Web.app」拖入「Applications」
+2. 在应用程序文件夹中：右键 Mercury Web → 打开 → 再次确认打开
+   （勿直接双击；双击弹窗只有「完成/移到废纸篓」，没有「打开」）
+3. 若仍无法打开：系统设置 → 隐私与安全性 → 仍要打开
 
-数据保存在：~/Library/Application Support/Mercury Web/
-退出：在 Dock 中右键 Mercury Web → 退出
+首次放行后可正常双击。浏览器将打开 http://127.0.0.1:6789
+
+数据：~/Library/Application Support/Mercury Web/
+退出：Dock 中右键 Mercury Web → 退出
 EOF
 
 echo "==> [5/5] Create DMG"

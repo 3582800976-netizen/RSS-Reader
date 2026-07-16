@@ -16,9 +16,14 @@
 
 1. 打开 DMG → 拖入 **应用程序**
 2. 在应用程序文件夹中 **右键 Mercury Web → 打开 → 再次确认打开**
+
+**若直接双击** 只有「完成 / 移到废纸篓」，请先点 **完成**，再执行步骤 2。
+
+**若右键后仍无「打开」**：**系统设置 → 隐私与安全性** → 底部 **仍要打开**（Open Anyway）。
+
 3. 首次放行后可双击启动；浏览器将自动打开阅读界面
 
-> 若仅双击图标，macOS 可能直接拦截。详细说明见 [test0716/packaging/DISTRIBUTION.md](test0716/packaging/DISTRIBUTION.md)
+> 详细说明见 [test0716/packaging/DISTRIBUTION.md](test0716/packaging/DISTRIBUTION.md)
 
 ---
 
