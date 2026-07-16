@@ -7,7 +7,7 @@
 
 ## 安装
 
-1. 打开 `Mercury Web-0.2.0-arm64.dmg`
+1. 打开 `Mercury Web-0716-arm64.dmg`
 2. 将 **Mercury Web.app** 拖入 **Applications** 文件夹
 3. 从启动台或「应用程序」中打开 Mercury Web
 
@@ -55,4 +55,4 @@
 ./packaging/build_dmg.sh
 ```
 
-产物位于 `release/Mercury Web-0.2.0-arm64.dmg`。
+产物位于 `release/Mercury Web-0716-arm64.dmg`。

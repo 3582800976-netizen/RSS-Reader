@@ -1,7 +1,28 @@
-﻿# RSS Reader · test0715
+﻿# RSS Reader · test0716
 
-> 本地优先（Local-first）的 Web RSS 阅读器。
->
+> 本地优先（Local-first）的 Web RSS 阅读器。  
+> 本目录为 **DMG 打包版**，含 macOS 一键安装能力。
+
+---
+
+## macOS 一键安装（推荐）
+
+> Apple Silicon（M 系列）Mac 可直接下载，**无需**安装 Python / Node。
+
+| | |
+|---|---|
+| **下载** | [**Mercury Web-0716-arm64.dmg**](https://github.com/3582800976-netizen/RSS-Reader/releases/latest) |
+| **系统要求** | macOS 12+，Apple Silicon |
+| **首次打开** | 若提示无法验证开发者：**右键 App → 打开** |
+
+1. 在 [Releases](https://github.com/3582800976-netizen/RSS-Reader/releases/latest) 下载 DMG
+2. 拖入 **应用程序（Applications）** 后启动
+3. 浏览器将自动打开 `http://127.0.0.1:6789`
+
+更多说明：[packaging/DISTRIBUTION.md](packaging/DISTRIBUTION.md)
+
+---
+
 > 实现课程作业必做① + ②：Feed / OPML 管理、内容清洗与阅读渲染，并扩展收藏、搜索、阅读主题以及 AI 智能摘要与翻译。
 
 参考项目：[Mercury](https://github.com/neolee/mercury)（仅参考交互设计，不移植 SwiftUI）。
@@ -378,7 +399,7 @@ AI 摘要、翻译、阅读偏好等均持久化存储于本地 SQLite 数据库
 ./packaging/build_dmg.sh
 ```
 
-产物：`Mercury Web-0.2.0-arm64.dmg`
+产物：`Mercury Web-0716-arm64.dmg`
 
 ## 分发与使用
 
