@@ -1,0 +1,35 @@
+from __future__ import annotations
+
+import sqlite3
+from datetime import datetime, timezone
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def record_usage(
+    conn: sqlite3.Connection,
+    *,
+    provider_name: str | None,
+    model_name: str | None,
+    agent_type: str,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+) -> None:
+    conn.execute(
+        """
+        INSERT INTO llm_usages
+        (provider_name, model_name, agent_type, prompt_tokens, completion_tokens, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            provider_name,
+            model_name,
+            agent_type,
+            int(prompt_tokens or 0),
+            int(completion_tokens or 0),
+            utc_now(),
+        ),
+    )
+    conn.commit()

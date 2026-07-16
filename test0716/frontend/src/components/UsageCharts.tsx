@@ -1,0 +1,178 @@
+import { useMemo } from "react";
+
+export type DailyUsagePoint = {
+  date: string;
+  calls: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+};
+
+function formatShortDate(iso: string): string {
+  const parts = iso.split("-");
+  if (parts.length < 3) return iso;
+  return `${Number(parts[1])}/${Number(parts[2])}`;
+}
+
+type CallsChartProps = {
+  days: DailyUsagePoint[];
+};
+
+export function CallsChart({ days }: CallsChartProps) {
+  const max = Math.max(1, ...days.map((d) => d.calls));
+  const w = 560;
+  const h = 160;
+  const padL = 28;
+  const padR = 8;
+  const padT = 12;
+  const padB = 28;
+  const innerW = w - padL - padR;
+  const innerH = h - padT - padB;
+  const n = Math.max(days.length, 1);
+  const gap = 2;
+  const barW = Math.max(2, innerW / n - gap);
+
+  const ticks = [0, Math.ceil(max / 2), max];
+
+  return (
+    <div className="usage-chart">
+      <div className="usage-chart-head">
+        <strong>API 请求次数</strong>
+        <span className="muted">{days.reduce((s, d) => s + d.calls, 0)} 次（近 {days.length} 天）</span>
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="usage-svg" role="img" aria-label="每日 API 请求次数">
+        {ticks.map((t) => {
+          const y = padT + innerH - (t / max) * innerH;
+          return (
+            <g key={t}>
+              <line x1={padL} x2={w - padR} y1={y} y2={y} className="chart-grid" />
+              <text x={padL - 6} y={y + 3} textAnchor="end" className="chart-tick">
+                {t}
+              </text>
+            </g>
+          );
+        })}
+        {days.map((d, i) => {
+          const bh = (d.calls / max) * innerH;
+          const x = padL + i * (barW + gap);
+          const y = padT + innerH - bh;
+          return (
+            <g key={d.date}>
+              <rect
+                x={x}
+                y={y}
+                width={barW}
+                height={Math.max(bh, d.calls > 0 ? 2 : 0)}
+                rx={1.5}
+                className="chart-bar-calls"
+              >
+                <title>{`${d.date}：${d.calls} 次`}</title>
+              </rect>
+              {(i === 0 || i === n - 1 || i === Math.floor(n / 2)) && (
+                <text x={x + barW / 2} y={h - 8} textAnchor="middle" className="chart-tick">
+                  {formatShortDate(d.date)}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+type TokensChartProps = {
+  days: DailyUsagePoint[];
+};
+
+export function TokensChart({ days }: TokensChartProps) {
+  const max = Math.max(1, ...days.map((d) => d.total_tokens));
+  const w = 560;
+  const h = 160;
+  const padL = 36;
+  const padR = 8;
+  const padT = 12;
+  const padB = 28;
+  const innerW = w - padL - padR;
+  const innerH = h - padT - padB;
+  const n = Math.max(days.length, 1);
+  const gap = 2;
+  const barW = Math.max(2, innerW / n - gap);
+  const ticks = [0, Math.ceil(max / 2), max];
+  const totalPrompt = days.reduce((s, d) => s + d.prompt_tokens, 0);
+  const totalCompletion = days.reduce((s, d) => s + d.completion_tokens, 0);
+
+  return (
+    <div className="usage-chart">
+      <div className="usage-chart-head">
+        <strong>Tokens</strong>
+        <span className="muted">
+          输入 {totalPrompt.toLocaleString()} · 输出 {totalCompletion.toLocaleString()}
+        </span>
+      </div>
+      <div className="usage-legend">
+        <span className="leg prompt">Prompt</span>
+        <span className="leg completion">Completion</span>
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="usage-svg" role="img" aria-label="每日 Token 用量">
+        {ticks.map((t) => {
+          const y = padT + innerH - (t / max) * innerH;
+          return (
+            <g key={t}>
+              <line x1={padL} x2={w - padR} y1={y} y2={y} className="chart-grid" />
+              <text x={padL - 6} y={y + 3} textAnchor="end" className="chart-tick">
+                {t >= 1000 ? `${Math.round(t / 100) / 10}k` : t}
+              </text>
+            </g>
+          );
+        })}
+        {days.map((d, i) => {
+          const promptH = (d.prompt_tokens / max) * innerH;
+          const completionH = (d.completion_tokens / max) * innerH;
+          const x = padL + i * (barW + gap);
+          const yPrompt = padT + innerH - promptH - completionH;
+          const yCompletion = padT + innerH - completionH;
+          return (
+            <g key={d.date}>
+              {d.prompt_tokens > 0 && (
+                <rect
+                  x={x}
+                  y={yPrompt}
+                  width={barW}
+                  height={Math.max(promptH, 1)}
+                  className="chart-bar-prompt"
+                >
+                  <title>{`${d.date} Prompt ${d.prompt_tokens}`}</title>
+                </rect>
+              )}
+              {d.completion_tokens > 0 && (
+                <rect
+                  x={x}
+                  y={yCompletion}
+                  width={barW}
+                  height={Math.max(completionH, 1)}
+                  rx={1}
+                  className="chart-bar-completion"
+                >
+                  <title>{`${d.date} Completion ${d.completion_tokens}`}</title>
+                </rect>
+              )}
+              {(i === 0 || i === n - 1 || i === Math.floor(n / 2)) && (
+                <text x={x + barW / 2} y={h - 8} textAnchor="middle" className="chart-tick">
+                  {formatShortDate(d.date)}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+export function useDailyMaxLabel(days: DailyUsagePoint[]) {
+  return useMemo(() => {
+    const last = [...days].reverse().find((d) => d.calls > 0 || d.total_tokens > 0);
+    return last;
+  }, [days]);
+}
