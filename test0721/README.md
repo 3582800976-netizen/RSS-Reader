@@ -1,4 +1,4 @@
-# RSS Reader · test0721
+﻿# RSS Reader · test0721
 
 > 本地优先（Local-first）的 Web RSS 阅读器。  
 > 基于 test0716 全功能，新增 **AI 厂商模板**（选择厂商自动填充 Base URL）。  
@@ -12,7 +12,7 @@
 
 | | |
 |---|---|
-| **下载** | [**Mercury Web-0721-arm64.dmg**](https://github.com/3582800976-netizen/RSS-Reader/releases/tag/test0721-dmg) |
+| **下载** | [**Mercury Web-0721-arm64.dmg**](https://github.com/3582800976-netizen/RSS-Reader/releases/latest) |
 | **系统要求** | macOS 12+，Apple Silicon |
 
 ### 重要：从 GitHub 下载后首次打开
@@ -23,7 +23,7 @@
 
 **这是未签名应用的正常提示，不代表检测到病毒。** 请按以下步骤操作：
 
-1. 在 [Releases](https://github.com/3582800976-netizen/RSS-Reader/releases/tag/test0721-dmg) 下载 DMG 并打开
+1. 在 [Releases](https://github.com/3582800976-netizen/RSS-Reader/releases/latest) 下载 DMG 并打开
 2. 将 **Mercury Web** 拖入 **应用程序（Applications）**
 3. 打开应用程序文件夹，**右键 Mercury Web → 打开**
 4. 在弹窗中再次点击 **打开**
