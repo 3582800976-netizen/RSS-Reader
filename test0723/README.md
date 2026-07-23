@@ -1,7 +1,7 @@
-# RSS Reader · test0721
+# RSS Reader · test0723
 
 > 本地优先（Local-first）的 Web RSS 阅读器。  
-> 基于 test0716 全功能，新增 **AI 厂商模板**（选择厂商自动填充 Base URL）。  
+> 在 test0721（AI 厂商模板）基础上，新增 **已读延迟设置** 与 **半屏单栏钻入** 阅读体验。  
 > 本目录亦含 macOS DMG 打包能力。
 
 ---
@@ -12,7 +12,7 @@
 
 | | |
 |---|---|
-| **下载** | [**Mercury Web-0721-arm64.dmg**](https://github.com/3582800976-netizen/RSS-Reader/releases/tag/test0721-dmg) |
+| **下载** | [**Mercury Web-0723-arm64.dmg**](https://github.com/3582800976-netizen/RSS-Reader/releases/tag/test0723-dmg) |
 | **系统要求** | macOS 12+，Apple Silicon |
 
 ### 重要：从 GitHub 下载后首次打开
@@ -23,7 +23,7 @@
 
 **这是未签名应用的正常提示，不代表检测到病毒。** 请按以下步骤操作：
 
-1. 在 [Releases](https://github.com/3582800976-netizen/RSS-Reader/releases/tag/test0721-dmg) 下载 DMG 并打开
+1. 在 [Releases](https://github.com/3582800976-netizen/RSS-Reader/releases/latest) 下载 DMG 并打开
 2. 将 **Mercury Web** 拖入 **应用程序（Applications）**
 3. 打开应用程序文件夹，**右键 Mercury Web → 打开**
 4. 在弹窗中再次点击 **打开**
@@ -55,10 +55,11 @@
 - 单源同步 / 全部同步
 - Feed 去重（`feed_id + guid`）
 - OPML 导入 / 导出
-- 三栏阅读界面
+- 三栏阅读界面（宽屏）
   - 左侧：订阅源
   - 中间：文章列表
   - 右侧：文章详情
+- **半屏 / 窄屏（宽度 ≤ 860px）**：单栏钻入导航，见下文「半屏阅读」
 
 ---
 
@@ -130,6 +131,38 @@ SQLite 增量缓存
   - L
 - 双栏宽度拖拽
 - 阅读设置持久化
+- **显示设置**
+  - 主题、字号（S / M / L）
+  - **已读设置**：打开未读文章后，延迟若干秒再自动标为已读（0–10 秒，步进 1 秒）
+    - **0 秒**：与原先一致，点进文章立即标为已读
+    - **1–10 秒**：在阅读页停留满设定时间后才标为已读；未满时间切换到其他文章则**不会**标为已读
+    - 阅读区手动「标为已读 / 未读」、列表「全部标为已读」不受此延迟影响
+    - 偏好保存在浏览器 `localStorage`（键 `rss-mark-read-delay`），仅本机有效
+
+---
+
+## 半屏阅读（窄屏布局）
+
+当窗口宽度 **≤ 860px**（竖屏、分屏、手机浏览器等）时，不再将三栏纵向挤在一起，而是 **一次只显示一层**，通过返回键在层之间切换：
+
+```text
+订阅源  ──选源/视图──▶  文章列表  ──选文章──▶  阅读
+   ▲                      ▲                    │
+   └──────── 返回 ────────┴──── 返回 ───────────┘
+```
+
+| 层级 | 内容 | 返回 |
+|------|------|------|
+| 订阅源 | 全部 / 未读 / 收藏、添加源、OPML 导入导出（保留「导入」「导出」文字） | — |
+| 文章 | 当前源或视图下的文章列表、「全部标为已读」 | ← 订阅源 |
+| 阅读 | 正文 / 网页 / 双栏、AI 摘要与翻译、收藏与已读 | ← 文章 |
+
+窄屏下的其它优化：
+
+- 顶栏两行：搜索 + 阅读模式；**显示设置 / AI 设置 / 同步全部** 收入 **⋯** 菜单
+- 阅读区 AI：**AI 摘要**、**AI 翻译** 为主按钮 + **▾** 选择语言（适配触控，不依赖悬停）
+- 双栏模式在窄屏下改为正文与网页 **上下分栏**；双语对照为原文在上、译文在下
+- 宽屏（> 860px）仍为左中右三栏，行为与此前一致
 
 ---
 
@@ -240,7 +273,7 @@ asyncio.create_task()
 # 项目结构
 
 ```text
-test0721/
+test0723/
 │
 ├── run.sh                      # 开发环境一键启动
 ├── README.md
@@ -261,7 +294,7 @@ test0721/
 │   └── DISTRIBUTION.md         # 分发与安装说明
 │
 ├── release/                    # DMG 产物目录（构建后生成）
-│   └── Mercury Web-0721-arm64.dmg
+│   └── Mercury Web-0723-arm64.dmg
 │
 ├── backend/
 │   ├── requirements.txt
@@ -339,9 +372,9 @@ Windows 推荐：
 ## 运行
 
 ```bash
-cd test0721
+cd test0723
 
-chmod +x frontend/node_modules/.bin/*
+chmod +x run.sh
 
 ./run.sh
 ```
@@ -407,7 +440,7 @@ AI 摘要、翻译、阅读偏好等均持久化存储于本地 SQLite 数据库
 
 ---
 
-# macOS DMG 打包（test0721）
+# macOS DMG 打包（test0723）
 
 将 Web 应用打包为 Apple Silicon Mac 可一键使用的 `.dmg` 安装包，终端用户无需安装 Python / Node。
 
@@ -417,7 +450,7 @@ AI 摘要、翻译、阅读偏好等均持久化存储于本地 SQLite 数据库
 ./packaging/build_dmg.sh
 ```
 
-产物：`Mercury Web-0721-arm64.dmg`
+产物：`Mercury Web-0723-arm64.dmg`
 
 ## 分发与使用
 
