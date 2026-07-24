@@ -3,8 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DMG="$ROOT/release/Mercury Web-0723-arm64.dmg"
-TAG="test0723-dmg"
+DMG="$ROOT/release/Mercury Web-0724-arm64.dmg"
+TAG="test0724-dmg"
 REPO="3582800976-netizen/RSS-Reader"
 
 if [[ ! -f "$DMG" ]]; then
@@ -19,14 +19,17 @@ if ! command -v gh >/dev/null 2>&1; then
 fi
 
 NOTES="$(cat <<'EOF'
-## Mercury Web — macOS 安装包（test0723）
+## Mercury Web — macOS 安装包（test0724）
 
 Apple Silicon Mac 一键安装，无需 Python / Node。
 
 ### 本版更新
 
-- **已读设置**：显示设置中可配置打开文章后延迟 0–10 秒再自动标为已读
-- **半屏阅读**：窗口宽度 ≤ 860px 时单栏钻入（订阅源 → 文章 → 阅读），顶栏与 AI 操作针对窄屏优化
+- **AI 问答**：底部问答坞流式多轮对话，可上下拖动调高；顶栏「AI 摘要」一键注入
+- **按文章保存聊天记录**：再打开可恢复；支持确认后清空
+- **划词问 AI**：阅读/双语正文选中后弹出「问AI」
+- **宽屏栏目收起**：可收起订阅源或全屏阅读
+- **拖动优化**：三栏 / 双栏 / 问答拖动更跟手
 
 ### 重要：从 GitHub 下载后首次打开
 
@@ -55,7 +58,7 @@ Apple Silicon Mac 一键安装，无需 Python / Node。
 
 ### 源码
 
-[test/test0723](https://github.com/3582800976-netizen/RSS-Reader/tree/test/test0723)
+[test/test0724](https://github.com/3582800976-netizen/RSS-Reader/tree/test/test0724)
 EOF
 )"
 
@@ -70,7 +73,7 @@ else
   echo "==> Creating release $TAG..."
   gh release create "$TAG" "$DMG" \
     --repo "$REPO" \
-    --title "Mercury Web 0723 — macOS 安装包（Apple Silicon）" \
+    --title "Mercury Web 0724 — macOS 安装包（Apple Silicon）" \
     --notes "$NOTES" \
     --latest
 fi

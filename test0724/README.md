@@ -12,7 +12,7 @@
 
 | | |
 |---|---|
-| **下载** | [**Mercury Web-0724-arm64.dmg**](https://github.com/3582800976-netizen/RSS-Reader/releases/latest) |
+| **下载** | [**Mercury Web-0724-arm64.dmg**](https://github.com/3582800976-netizen/RSS-Reader/releases/tag/test0724-dmg) |
 | **系统要求** | macOS 12+，Apple Silicon |
 
 ### 重要：从 GitHub 下载后首次打开
